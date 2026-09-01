@@ -21,6 +21,7 @@ export class ProductsService {
       ...(query.minRating !== undefined && { rating: { gte: query.minRating } }),
       ...(query.minDiscount !== undefined && { discount: { gte: query.minDiscount } }),
       ...(query.freeShipping !== undefined && { freeShipping: query.freeShipping }),
+      ...(query.inStock && { inventory: { stockQuantity: { gt: 0 } } }),
       ...((query.minPrice !== undefined || query.maxPrice !== undefined) && {
         price: {
           ...(query.minPrice !== undefined && { gte: query.minPrice }),

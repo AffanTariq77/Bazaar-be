@@ -50,6 +50,11 @@ export class ProductQueryDto extends PaginationQueryDto {
   freeShipping?: boolean;
 
   @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  inStock?: boolean;
+
+  @IsOptional()
   @IsIn(PRODUCT_SORTS)
   sort?: ProductSort;
 }
