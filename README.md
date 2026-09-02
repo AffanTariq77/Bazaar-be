@@ -1,114 +1,146 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# BAZAAR — Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+REST API for **BAZAAR**, a Daraz-inspired Pakistani marketplace built as a university full-stack project. This repo is the backend; the frontend lives in a companion repo, [`Bazaar-fe`](https://github.com/AffanTariq77/Bazaar-fe).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Every feature here is backed by a real PostgreSQL database through Prisma — there is no mocked or frontend-only state anywhere in the stack.
 
-## Description
+## Features
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- **Auth** — JWT access/refresh tokens, bcrypt password hashing, httpOnly refresh cookie, role-based guards (`CUSTOMER`, `SELLER`, `ADMIN`)
+- **Catalog** — categories with parent/child relationships, products with images and inventory, full-text-ish search, filtering (category, brand, price, rating, discount, free shipping, in-stock), sorting, pagination
+- **Cart & wishlist** — server-persisted, stock-checked on every mutation, move-to-cart
+- **Checkout & orders** — address book, delivery/payment method selection, coupon application; order creation runs inside a single DB transaction that decrements inventory with a guarded conditional update, so stock can never go negative even under concurrent/stale carts
+- **Reviews** — gated on an actual purchase, one per user per product, keeps a denormalized average rating + count on the product
+- **Seller dashboard** — sales/revenue/order stats, product CRUD (with stock/price updates), order status management scoped to the seller's own products
+- **Admin dashboard** — platform-wide stats and lightweight charts (revenue/orders/signups over the last 7 days, top categories/products), read access to users/sellers/products/orders/categories, order status override
+- **Coupons** — admin CRUD, validation (min order amount, expiry, usage limit, one-per-user), discount capped at a configured maximum
+- **Notifications** — created automatically on order status changes
+- **Security** — helmet secure headers, rate limiting (global + a stricter limit on login/register), DTO validation on every mutating endpoint, ownership checks that return 404 rather than 403 to avoid leaking existence of other users' data
 
-## Project setup
+## Architecture
 
-```bash
-$ npm install
+NestJS modular monolith — one module per domain (`auth`, `users`, `products`, `categories`, `cart`, `wishlist`, `addresses`, `orders`, `reviews`, `sellers`, `admin`, `coupons`, `notifications`), each with its own controller, service, and DTOs. A single `PrismaService` (in `database/`) is injected everywhere; there is no repository-pattern layer on top of it since Prisma already is that abstraction.
+
+`common/` holds cross-cutting pieces:
+- `filters/http-exception.filter.ts` + `interceptors/response.interceptor.ts` — every response is wrapped as `{ success, data, message }` / `{ success: false, message, statusCode }`
+- `guards/jwt-auth.guard.ts` + `guards/roles.guard.ts` with `@CurrentUser()` / `@Roles()` decorators
+- `not-found.module.ts` — a wildcard 404 handler. **It must stay the last entry in `AppModule`'s imports** — Nest maps routes in import order, and a wildcard registered earlier will shadow every route that comes after it. (This bit twice during development; see commit history on `app.module.ts` if you're debugging a route that mysteriously 404s.)
+- `auth-guards.module.ts` — a `@Global()` module registering `PassportModule.register({ defaultStrategy: 'jwt' })` once, so any feature module can use `JwtAuthGuard` without re-registering `PassportModule` itself (another thing that bit twice).
+
+## Tech stack
+
+Node.js, TypeScript, NestJS 12, Prisma 6 + PostgreSQL, JWT (`@nestjs/jwt` + Passport), bcrypt, class-validator/class-transformer, Swagger, Vitest + Supertest for e2e tests, oxlint.
+
+## Folder structure
+
+```
+src/
+  auth/          users/         products/      categories/
+  cart/          wishlist/      addresses/     orders/
+  reviews/       sellers/       admin/         coupons/
+  notifications/ common/        database/
+  app.module.ts  main.ts
+prisma/
+  schema.prisma  seed.ts        migrations/
+test/
+  *.e2e-spec.ts  utils/
 ```
 
-## Compile and run the project
+Each feature folder follows the same shape: `*.module.ts`, `*.controller.ts`, `*.service.ts`, `dto/`.
+
+## Database schema overview
+
+`User` (roles: CUSTOMER/SELLER/ADMIN) → `Seller` (1:1) and `Address[]`. `Category` self-relates for parent/child. `Product` belongs to a `Category` and `Seller`, has `ProductImage[]` and a 1:1 `Inventory`. `Cart`/`Wishlist` are 1:1 with `User`, each with their own item join table. `Order` has `OrderItem[]`, a 1:1 `Payment`, an optional `Coupon`, and belongs to an `Address`. `Review` is unique per `(productId, userId)`. `Coupon` has `CouponUsage[]` (unique per `(couponId, userId)`, enforcing one use per customer). `Notification` belongs to a `User`.
+
+Full definitions: [`prisma/schema.prisma`](prisma/schema.prisma).
+
+## Installation
+
+Requires Node 20+ and a local PostgreSQL instance (or Docker — see below).
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
+cp .env.example .env   # then fill in DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET
+npx prisma migrate dev
+npm run db:seed
+npm run start:dev
 ```
 
-## Run tests
+The API runs at `http://localhost:3000/api`, with live Swagger docs at `http://localhost:3000/api/docs`.
+
+## Environment variables
+
+See [`.env.example`](.env.example). `JWT_SECRET`/`JWT_REFRESH_SECRET` should be random strings (`openssl rand -hex 32` works well) — never commit real values. `COOKIE_SECURE` should stay `false` unless this API is actually served over HTTPS; it is deliberately not tied to `NODE_ENV`, since `NODE_ENV=production` does not imply TLS is present (the docker-compose setup below is a case in point — it sets `NODE_ENV=production` but serves everything over plain HTTP).
+
+## Database migrations
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npx prisma migrate dev --name <description>   # create + apply a migration in development
+npx prisma migrate deploy                      # apply pending migrations only (used in the Docker image's startup command)
 ```
 
-## Deployment
+## Seed data
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+`npm run db:seed` wipes every table (in FK-safe order) and recreates:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+- 14 categories (11 top-level, 3 children of Electronics)
+- 5 sellers, 20 customers, 1 admin — 26 users total
+- 83 products across all categories, with images and varied stock levels (some low-stock, some out-of-stock)
+- 1 coupon (`BAZAAR10` — 10% off, Rs. 5,000 minimum order, Rs. 1,000 max discount)
+
+### Demo accounts
+
+All seeded accounts share the password `Password123!`:
+
+| Role     | Email                  |
+|----------|-------------------------|
+| Admin    | `admin@bazaar.test`     |
+| Seller   | `seller@bazaar.test` (TechBazaar Store) |
+| Customer | `customer@bazaar.test`  |
+
+## Running
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run start:dev    # watch mode
+npm run build        # compile to dist/
+npm run start:prod    # run the compiled build
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Docker
 
-## Observability
+```bash
+cp .env.example .env   # fill in JWT_SECRET / JWT_REFRESH_SECRET — docker-compose reads this file too
+docker compose up --build
+```
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+This brings up Postgres, the backend (migrations run automatically on container start via `prisma migrate deploy`), and the frontend — built from the sibling `../Bazaar-fe` directory, so **both repos need to be cloned as sibling folders** for `docker compose up` to work. The frontend is served at `http://localhost:5173`, the API at `http://localhost:3000/api`.
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+Seeding is not run automatically on container start (it destroys existing data on every run, which is fine for local dev but not something to do unattended on every restart). Run it once manually:
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
+```bash
+docker compose exec backend npm run db:seed
+```
 
-## Resources
+## API documentation
 
-Check out a few resources that may come in handy when working with NestJS:
+Full request/response schemas are available live at `/api/docs` (Swagger UI) once the server is running. Endpoint groups:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+`/api/auth`, `/api/users`, `/api/categories`, `/api/products` (+ `/api/products/:productId/reviews`, `/api/reviews/mine`), `/api/cart`, `/api/wishlist`, `/api/addresses`, `/api/orders`, `/api/coupons/validate`, `/api/notifications`, `/api/seller/*`, `/api/admin/*` (including `/api/admin/coupons`).
 
-## Support
+## Testing
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+npm run test         # unit tests
+npm run test:e2e      # 28 e2e tests against a real database — see below
+npm run lint
+```
 
-## Stay in touch
+The e2e suite (`test/*.e2e-spec.ts`) boots the real Nest app (same global prefix, validation pipe, filters, and interceptor as `main.ts` — a plain `Test.createTestingModule` + `app.init()` would skip all of that) and runs against whatever `DATABASE_URL` is configured, creating and cleaning up its own fixtures. It covers: authentication, product creation and search, cart behavior and the stock guard, order creation and the inventory-never-goes-negative guarantee, cross-user authorization (verifying a 404, not a 403, so existence of another user's data is never leaked), and coupon validation (minimum order, expiry, usage limits, discount capping).
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Build
 
-## License
+```bash
+npm run build
+```
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Compiles to `dist/`; the entry point is `dist/main.js`.
