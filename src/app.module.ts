@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AddressesModule } from './addresses/addresses.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
@@ -8,6 +9,7 @@ import { CategoriesModule } from './categories/categories.module.js';
 import { AuthGuardsModule } from './common/auth-guards.module.js';
 import { NotFoundModule } from './common/not-found.module.js';
 import { PrismaModule } from './database/prisma.module.js';
+import { OrdersModule } from './orders/orders.module.js';
 import { ProductsModule } from './products/products.module.js';
 import { UsersModule } from './users/users.module.js';
 import { WishlistModule } from './wishlist/wishlist.module.js';
@@ -25,6 +27,8 @@ import { WishlistModule } from './wishlist/wishlist.module.js';
     ProductsModule,
     CartModule,
     WishlistModule,
+    AddressesModule,
+    OrdersModule,
     NotFoundModule,
   ],
   controllers: [AppController],

@@ -7,6 +7,7 @@ const PRODUCT_INCLUDE = {
   images: { orderBy: { position: 'asc' as const } },
   category: true,
   seller: true,
+  inventory: true,
 } satisfies Prisma.ProductInclude;
 
 @Injectable()
@@ -59,7 +60,7 @@ export class ProductsService {
   async findBySlug(slug: string) {
     const product = await this.prisma.product.findUnique({
       where: { slug },
-      include: { ...PRODUCT_INCLUDE, inventory: true },
+      include: PRODUCT_INCLUDE,
     });
     if (!product || product.status !== 'ACTIVE') throw new NotFoundException('Product not found');
     return product;
