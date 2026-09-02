@@ -11,6 +11,7 @@ import { NotFoundModule } from './common/not-found.module.js';
 import { PrismaModule } from './database/prisma.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { ProductsModule } from './products/products.module.js';
+import { ReviewsModule } from './reviews/reviews.module.js';
 import { UsersModule } from './users/users.module.js';
 import { WishlistModule } from './wishlist/wishlist.module.js';
 
@@ -29,6 +30,7 @@ import { WishlistModule } from './wishlist/wishlist.module.js';
     WishlistModule,
     AddressesModule,
     OrdersModule,
+    ReviewsModule,
     NotFoundModule,
   ],
   controllers: [AppController],
