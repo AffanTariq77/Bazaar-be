@@ -9,7 +9,9 @@ import { CartModule } from './cart/cart.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { AuthGuardsModule } from './common/auth-guards.module.js';
 import { NotFoundModule } from './common/not-found.module.js';
+import { CouponsModule } from './coupons/coupons.module.js';
 import { PrismaModule } from './database/prisma.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { ProductsModule } from './products/products.module.js';
 import { ReviewsModule } from './reviews/reviews.module.js';
@@ -31,6 +33,8 @@ import { WishlistModule } from './wishlist/wishlist.module.js';
     CartModule,
     WishlistModule,
     AddressesModule,
+    NotificationsModule,
+    CouponsModule,
     OrdersModule,
     ReviewsModule,
     SellersModule,

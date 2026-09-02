@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { OrderStatus, Role } from '@prisma/client';
+import { NotificationType, OrderStatus, Role } from '@prisma/client';
 import type { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 function lastNDays(n: number): string[] {
   const days: string[] = [];
@@ -24,7 +25,10 @@ function bucketCountByDay(dates: Date[], days: string[]) {
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async dashboard() {
     const since = new Date();
@@ -173,7 +177,15 @@ export class AdminService {
   async updateOrderStatus(orderId: string, status: OrderStatus) {
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (!order) throw new NotFoundException('Order not found');
-    return this.prisma.order.update({ where: { id: orderId }, data: { status } });
+
+    const updated = await this.prisma.order.update({ where: { id: orderId }, data: { status } });
+    await this.notifications.create(
+      order.userId,
+      NotificationType.ORDER_STATUS,
+      'Order status updated',
+      `Your order ${order.orderNumber} is now ${status}.`,
+    );
+    return updated;
   }
 
   findCategories() {

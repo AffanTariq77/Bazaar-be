@@ -164,7 +164,21 @@ function pick<T>(items: T[]): T {
 }
 
 async function main() {
-  console.log('Resetting catalog + user tables...');
+  console.log('Resetting all data...');
+  // Deleted in FK-safe order: transactional records reference products/users,
+  // which reference categories/sellers, so they must go first.
+  await prisma.couponUsage.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.review.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.orderItem.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.cartItem.deleteMany();
+  await prisma.cart.deleteMany();
+  await prisma.wishlistItem.deleteMany();
+  await prisma.wishlist.deleteMany();
+  await prisma.address.deleteMany();
+  await prisma.coupon.deleteMany();
   await prisma.productImage.deleteMany();
   await prisma.inventory.deleteMany();
   await prisma.product.deleteMany();
@@ -255,6 +269,20 @@ async function main() {
       },
     });
   }
+
+  console.log('Creating coupons...');
+  const oneYearFromNow = new Date();
+  oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+  await prisma.coupon.create({
+    data: {
+      code: 'BAZAAR10',
+      discountPercent: 10,
+      minOrderAmount: 5000,
+      maxDiscount: 1000,
+      usageLimit: 500,
+      expiresAt: oneYearFromNow,
+    },
+  });
 
   console.log('Seed complete.');
   console.log(`Demo accounts (password: ${DEMO_PASSWORD}):`);

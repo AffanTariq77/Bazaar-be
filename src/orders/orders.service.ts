@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { DeliveryMethod, type Prisma } from '@prisma/client';
 import type { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
+import { CouponsService } from '../coupons/coupons.service.js';
 import { PrismaService } from '../database/prisma.service.js';
 import type { CreateOrderDto } from './dto/create-order.dto.js';
 
@@ -17,7 +18,10 @@ const ORDER_INCLUDE = {
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly coupons: CouponsService,
+  ) {}
 
   async create(userId: string, dto: CreateOrderDto) {
     const address = await this.prisma.address.findUnique({ where: { id: dto.addressId } });
@@ -37,7 +41,16 @@ export class OrdersService {
     );
     const freeShipping = cart.items.every((item) => item.product.freeShipping);
     const shippingFee = freeShipping ? 0 : SHIPPING_FEES[dto.deliveryMethod];
-    const total = subtotal + shippingFee;
+
+    let discount = 0;
+    let couponId: string | undefined;
+    if (dto.couponCode) {
+      const result = await this.coupons.validate(dto.couponCode, userId, subtotal);
+      discount = result.discount;
+      couponId = result.coupon.id;
+    }
+
+    const total = subtotal - discount + shippingFee;
     const orderNumber = `BZ-${Date.now().toString(36).toUpperCase()}${Math.floor(100 + Math.random() * 900)}`;
     const paid = dto.paymentMethod !== 'COD';
 
@@ -60,7 +73,9 @@ export class OrdersService {
           deliveryMethod: dto.deliveryMethod,
           subtotal,
           shippingFee,
+          discount,
           total,
+          couponId,
           items: {
             create: cart.items.map((item) => ({
               productId: item.productId,
@@ -78,6 +93,10 @@ export class OrdersService {
         },
         include: ORDER_INCLUDE,
       });
+
+      if (couponId) {
+        await tx.couponUsage.create({ data: { couponId, userId } });
+      }
 
       await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
 

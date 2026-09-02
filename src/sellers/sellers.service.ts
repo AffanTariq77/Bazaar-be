@@ -1,7 +1,8 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import type { OrderStatus, Prisma } from '@prisma/client';
+import { NotificationType, type OrderStatus, type Prisma } from '@prisma/client';
 import type { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import type { CreateSellerProductDto } from './dto/create-seller-product.dto.js';
 import type { UpdateSellerProductDto } from './dto/update-seller-product.dto.js';
 
@@ -19,7 +20,10 @@ const ORDER_INCLUDE = {
 
 @Injectable()
 export class SellersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async getSellerByUserId(userId: string) {
     const seller = await this.prisma.seller.findUnique({ where: { userId } });
@@ -157,7 +161,14 @@ export class SellersService {
     });
     if (!order) throw new NotFoundException('Order not found');
 
-    return this.prisma.order.update({ where: { id: orderId }, data: { status }, include: ORDER_INCLUDE });
+    const updated = await this.prisma.order.update({ where: { id: orderId }, data: { status }, include: ORDER_INCLUDE });
+    await this.notifications.create(
+      order.userId,
+      NotificationType.ORDER_STATUS,
+      'Order status updated',
+      `Your order ${order.orderNumber} is now ${status}.`,
+    );
+    return updated;
   }
 
   private async getOwnedProduct(sellerId: string, productId: string) {
