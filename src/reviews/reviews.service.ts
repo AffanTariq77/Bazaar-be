@@ -66,4 +66,16 @@ export class ReviewsService {
 
     return review;
   }
+
+  findByUser(userId: string) {
+    return this.prisma.review.findMany({
+      where: { userId },
+      include: {
+        product: {
+          select: { id: true, name: true, slug: true, images: { take: 1, orderBy: { position: 'asc' } } },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }

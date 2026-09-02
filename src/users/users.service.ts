@@ -20,6 +20,10 @@ export class UsersService {
     return this.prisma.user.create({ data });
   }
 
+  updateProfile(userId: string, data: { name?: string; phone?: string }) {
+    return this.prisma.user.update({ where: { id: userId }, data });
+  }
+
   toSafeUser(user: User): SafeUser {
     const { passwordHash: _passwordHash, ...safeUser } = user;
     return safeUser;
