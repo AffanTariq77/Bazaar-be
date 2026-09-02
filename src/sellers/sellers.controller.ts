@@ -26,6 +26,11 @@ export class SellersController {
     return this.sellers.findProducts(user.id, query);
   }
 
+  @Get('products/:id')
+  findProduct(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.sellers.findProduct(user.id, id);
+  }
+
   @Post('products')
   createProduct(@CurrentUser() user: AuthUser, @Body() dto: CreateSellerProductDto) {
     return this.sellers.createProduct(user.id, dto);

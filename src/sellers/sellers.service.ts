@@ -75,6 +75,12 @@ export class SellersService {
     return { items, total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
   }
 
+  async findProduct(userId: string, productId: string) {
+    const seller = await this.getSellerByUserId(userId);
+    const product = await this.getOwnedProduct(seller.id, productId);
+    return this.prisma.product.findUnique({ where: { id: product.id }, include: PRODUCT_INCLUDE });
+  }
+
   async createProduct(userId: string, dto: CreateSellerProductDto) {
     const seller = await this.getSellerByUserId(userId);
     const slug = await this.uniqueSlug(dto.name);
