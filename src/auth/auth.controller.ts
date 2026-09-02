@@ -54,7 +54,11 @@ export class AuthController {
     res.cookie(REFRESH_COOKIE, refreshToken, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      // Deliberately not tied to NODE_ENV: this app can run "production" behind
+      // plain HTTP (e.g. the local docker-compose demo), where a Secure cookie
+      // would silently never be sent back by the browser and break refresh.
+      // Set COOKIE_SECURE=true only once the deployment is actually served over HTTPS.
+      secure: process.env.COOKIE_SECURE === 'true',
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/api/auth',
     });
