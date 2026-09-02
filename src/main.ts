@@ -11,7 +11,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');
-  app.use(helmet());
+  // ponytail: helmet's package.json exports no "types" condition, so TS's
+  // nodenext resolution of the default import is environment-dependent (fine
+  // on macOS locally, resolves to a non-callable type on Vercel's Linux
+  // build). Cast past it; runtime export is the same callable function
+  // either way. Drop once helmet ships a "types" export condition.
+  app.use((helmet as any)());
   app.use(cookieParser());
   app.enableCors({
     origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
