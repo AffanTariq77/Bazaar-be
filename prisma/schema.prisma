@@ -1,5 +1,11 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // ponytail: Vercel's build container and its Lambda runtime use different
+  // libc/OpenSSL versions — "native" alone bundles an engine binary that
+  // matches the build machine, not the one the function actually runs on,
+  // so Prisma hangs trying to use it. rhel-openssl-3.0.x matches Vercel's
+  // current Node.js Lambda runtime.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
