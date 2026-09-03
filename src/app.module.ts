@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AddressesModule } from './addresses/addresses.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { AppController } from './app.controller.js';
@@ -11,6 +10,7 @@ import { CartModule } from './cart/cart.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { AuthGuardsModule } from './common/auth-guards.module.js';
 import { NotFoundModule } from './common/not-found.module.js';
+import { ThrottlerGuard } from './common/throttler/throttler.guard.js';
 import { CouponsModule } from './coupons/coupons.module.js';
 import { PrismaModule } from './database/prisma.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
@@ -26,7 +26,6 @@ import { WishlistModule } from './wishlist/wishlist.module.js';
   // routes in import order, and every future feature module goes before it.
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 100 }]),
     PrismaModule,
     AuthGuardsModule,
     UsersModule,
