@@ -1,25 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { AddressesModule } from './addresses/addresses.module.js';
-import { AdminModule } from './admin/admin.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
-import { CartModule } from './cart/cart.module.js';
-import { CategoriesModule } from './categories/categories.module.js';
 import { AuthGuardsModule } from './common/auth-guards.module.js';
 import { NotFoundModule } from './common/not-found.module.js';
 import { ThrottlerGuard } from './common/throttler/throttler.guard.js';
-import { CouponsModule } from './coupons/coupons.module.js';
 import { PrismaModule } from './database/prisma.module.js';
-import { NotificationsModule } from './notifications/notifications.module.js';
-import { OrdersModule } from './orders/orders.module.js';
-import { ProductsModule } from './products/products.module.js';
-import { ReviewsModule } from './reviews/reviews.module.js';
-import { SellersModule } from './sellers/sellers.module.js';
 import { UsersModule } from './users/users.module.js';
-import { WishlistModule } from './wishlist/wishlist.module.js';
 
 @Module({
   // NotFoundModule's wildcard route must stay the LAST entry here — Nest maps
@@ -30,17 +19,6 @@ import { WishlistModule } from './wishlist/wishlist.module.js';
     AuthGuardsModule,
     UsersModule,
     AuthModule,
-    CategoriesModule,
-    ProductsModule,
-    CartModule,
-    WishlistModule,
-    AddressesModule,
-    NotificationsModule,
-    CouponsModule,
-    OrdersModule,
-    ReviewsModule,
-    SellersModule,
-    AdminModule,
     NotFoundModule,
   ],
   controllers: [AppController],
